@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  height: 100%;
+}
+
+/* Soft warm gradient background — Lea bgGradient (#FFF5F5 → #FFF0E6). */
+body {
+  @apply text-slate-900 antialiased font-sans;
+  background: linear-gradient(180deg, theme("colors.lea.cream"), theme("colors.lea.peachbg"));
+  background-attachment: fixed;
+}
+
+/* Headings use Quicksand (Lea theme); falls back to Nunito then system. */
+h1,
+h2,
+h3,
+h4 {
+  font-family: theme("fontFamily.heading");
+}
