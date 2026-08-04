@@ -21,10 +21,25 @@ export async function proxy(
     method: init?.method ?? "GET",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(process.env.ADMIN_SECRET 
+  ? { Authorization: `Bearer ${process.env.ADMIN_SECRET}` } 
+  : token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,
     cache: "no-store",
   });
-  return res;
+
+  // lea-be-core wraps every response as { success, data } (or { success: false, error }
+  // on failure). Unwrap once here so every route handler — and the pages downstream —
+  // see the same flat shape the local mock store returns (e.g. { items, total }),
+  // instead of patching each call site. Error bodies are passed through unchanged
+  // since they already expose `.error` at the top level, which api.ts's req() expects.
+  const body = await res.json().catch(() => null);
+  const isEnvelope = !!body && typeof body === "object" && "success" in body && "data" in body;
+  const unwrapped = isEnvelope && (body as { success: boolean }).success ? (body as { data: unknown }).data : body;
+
+  return new Response(JSON.stringify(unwrapped), {
+    status: res.status,
+    headers: { "Content-Type": "application/json" },
+  });
 }
