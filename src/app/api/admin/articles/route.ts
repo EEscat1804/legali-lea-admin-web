@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mutate, readDb, audit, uid } from "@/lib/server/db";
 import { requireAdmin, isResponse } from "@/lib/server/session";
-import { backendConfigured, proxy } from "@/lib/server/backend";
+import { backendHas, proxy } from "@/lib/server/backend";
 import type { Article } from "@/lib/types";
 
 function slugify(s: string): string {
@@ -12,7 +12,8 @@ function slugify(s: string): string {
 export async function GET() {
   const gate = await requireAdmin("content.read");
   if (isResponse(gate)) return gate;
-  if (backendConfigured()) return NextResponse.json(await (await proxy("articles")).json());
+  // Not implemented on lea-be-core yet — see BACKEND_ENDPOINTS in backend.ts.
+  if (backendHas("articles:list")) return NextResponse.json(await (await proxy("articles")).json());
   const db = await readDb();
   return NextResponse.json({ items: db.articles });
 }
@@ -21,7 +22,8 @@ export async function POST(req: NextRequest) {
   const gate = await requireAdmin("content.write");
   if (isResponse(gate)) return gate;
   const body = await req.json().catch(() => ({}));
-  if (backendConfigured()) {
+  // Not implemented on lea-be-core yet — see BACKEND_ENDPOINTS in backend.ts.
+  if (backendHas("articles:create")) {
     const res = await proxy("articles", { method: "POST", body });
     return NextResponse.json(await res.json().catch(() => ({})), { status: res.status });
   }

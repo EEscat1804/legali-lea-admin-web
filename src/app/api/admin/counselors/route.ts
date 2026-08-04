@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mutate, readDb, audit, uid } from "@/lib/server/db";
 import { requireAdmin, isResponse } from "@/lib/server/session";
-import { backendConfigured, proxy } from "@/lib/server/backend";
+import { backendHas, proxy } from "@/lib/server/backend";
+import { mapCounselor } from "@/lib/server/backend-mappers";
 import type { Counselor } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
   const gate = await requireAdmin("counselors.read");
   if (isResponse(gate)) return gate;
   const search = new URL(req.url).search;
-  if (backendConfigured()) return NextResponse.json(await (await proxy(`counselors${search}`)).json());
+  if (backendHas("counselors:list")) {
+    const raw = await (await proxy(`counselors${search}`)).json();
+    return NextResponse.json({ items: (raw.items ?? []).map(mapCounselor), total: raw.total ?? 0 });
+  }
 
   const q = new URL(req.url).searchParams.get("q")?.toLowerCase() ?? "";
   const db = await readDb();
@@ -23,7 +27,11 @@ export async function POST(req: NextRequest) {
   const gate = await requireAdmin("counselors.write");
   if (isResponse(gate)) return gate;
   const body = await req.json().catch(() => ({}));
-  if (backendConfigured()) {
+  // lea-be-core (backend-test) only implements GET /counselors so far — no
+  // create endpoint yet — so this always falls through to the local store
+  // even when BACKEND_API_URL is set. Add "counselors:create" to
+  // BACKEND_ENDPOINTS in backend.ts once it ships.
+  if (backendHas("counselors:create")) {
     const res = await proxy("counselors", { method: "POST", body });
     return NextResponse.json(await res.json().catch(() => ({})), { status: res.status });
   }

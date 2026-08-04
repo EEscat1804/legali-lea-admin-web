@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mutate, readDb, audit } from "@/lib/server/db";
 import { requireAdmin, isResponse } from "@/lib/server/session";
-import { backendConfigured, proxy } from "@/lib/server/backend";
+import { backendHas, proxy } from "@/lib/server/backend";
 
 // Switch easily between AI models (manager ask #2 / PRD §3.9).
 export async function GET() {
   const gate = await requireAdmin("system.read");
   if (isResponse(gate)) return gate;
-  if (backendConfigured()) return NextResponse.json(await (await proxy("model-config")).json());
+  // Not implemented on lea-be-core yet — see BACKEND_ENDPOINTS in backend.ts.
+  if (backendHas("model-config:get")) return NextResponse.json(await (await proxy("model-config")).json());
   const db = await readDb();
   return NextResponse.json(db.modelConfig);
 }
@@ -18,7 +19,8 @@ export async function POST(req: NextRequest) {
   const gate = await requireAdmin("system.write");
   if (isResponse(gate)) return gate;
   const body = await req.json().catch(() => ({}));
-  if (backendConfigured()) {
+  // Not implemented on lea-be-core yet — see BACKEND_ENDPOINTS in backend.ts.
+  if (backendHas("model-config:update")) {
     const res = await proxy("model-config", { method: "POST", body });
     return NextResponse.json(await res.json().catch(() => ({})), { status: res.status });
   }

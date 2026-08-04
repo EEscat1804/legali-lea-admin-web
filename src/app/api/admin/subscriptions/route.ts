@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { readDb } from "@/lib/server/db";
 import { requireAdmin, isResponse } from "@/lib/server/session";
-import { backendConfigured, proxy } from "@/lib/server/backend";
+import { backendHas, proxy } from "@/lib/server/backend";
+import { mapSubscriptions } from "@/lib/server/backend-mappers";
 
 // Subscription control surface (manager ask / PRD §3.4). Returns the live
 // subscription rows (derived from users so admin overrides show up) + plans +
@@ -9,7 +10,10 @@ import { backendConfigured, proxy } from "@/lib/server/backend";
 export async function GET() {
   const gate = await requireAdmin("subscriptions.read");
   if (isResponse(gate)) return gate;
-  if (backendConfigured()) return NextResponse.json(await (await proxy("subscriptions")).json());
+  if (backendHas("subscriptions:list")) {
+    const raw = await (await proxy("subscriptions")).json();
+    return NextResponse.json(mapSubscriptions(raw));
+  }
 
   const db = await readDb();
   const rows = db.users.map((u) => ({

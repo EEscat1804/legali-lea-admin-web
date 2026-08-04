@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mutate, readDb, audit } from "@/lib/server/db";
 import { requireAdmin, isResponse } from "@/lib/server/session";
-import { backendConfigured, proxy } from "@/lib/server/backend";
+import { backendHas, proxy } from "@/lib/server/backend";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const gate = await requireAdmin("users.read");
   if (isResponse(gate)) return gate;
   const { id } = await params;
-  if (backendConfigured()) return NextResponse.json(await (await proxy(`users/${id}`)).json());
+  // Not implemented on lea-be-core yet (only the list endpoint exists) — see
+  // BACKEND_ENDPOINTS in backend.ts.
+  if (backendHas("users:get")) return NextResponse.json(await (await proxy(`users/${id}`)).json());
   const db = await readDb();
   const user = db.users.find((u) => u.id === id);
   if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -21,7 +23,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (isResponse(gate)) return gate;
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
-  if (backendConfigured()) {
+  // Not implemented on lea-be-core yet — see BACKEND_ENDPOINTS in backend.ts.
+  if (backendHas("users:update")) {
     const res = await proxy(`users/${id}`, { method: "PATCH", body });
     return NextResponse.json(await res.json().catch(() => ({})), { status: res.status });
   }

@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mutate, readDb, audit, uid } from "@/lib/server/db";
 import { requireAdmin, isResponse, publicAdmin } from "@/lib/server/session";
-import { backendConfigured, proxy } from "@/lib/server/backend";
+import { backendHas, proxy } from "@/lib/server/backend";
 
 // Manage admin accounts (PRD §2/§4.2). Super Admin only (admins.write).
 export async function GET() {
   const gate = await requireAdmin("admins.write");
   if (isResponse(gate)) return gate;
-  if (backendConfigured()) return NextResponse.json(await (await proxy("admins")).json());
+  // Not implemented on lea-be-core yet — see BACKEND_ENDPOINTS in backend.ts.
+  if (backendHas("admins:list")) return NextResponse.json(await (await proxy("admins")).json());
   const db = await readDb();
   return NextResponse.json({ items: db.admins.map(publicAdmin) });
 }
@@ -18,7 +19,8 @@ export async function POST(req: NextRequest) {
   const gate = await requireAdmin("admins.write");
   if (isResponse(gate)) return gate;
   const body = await req.json().catch(() => ({}));
-  if (backendConfigured()) {
+  // Not implemented on lea-be-core yet — see BACKEND_ENDPOINTS in backend.ts.
+  if (backendHas("admins:create")) {
     const res = await proxy("admins", { method: "POST", body });
     return NextResponse.json(await res.json().catch(() => ({})), { status: res.status });
   }

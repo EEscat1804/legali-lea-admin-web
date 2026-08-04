@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mutate, audit } from "@/lib/server/db";
 import { requireAdmin, isResponse } from "@/lib/server/session";
-import { backendConfigured, proxy } from "@/lib/server/backend";
+import { backendHas, proxy } from "@/lib/server/backend";
 
 // Publish/unpublish/edit an article. PATCH body: { status?, title?, body?, excerpt? }
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -9,7 +9,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (isResponse(gate)) return gate;
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
-  if (backendConfigured()) {
+  // Not implemented on lea-be-core yet — see BACKEND_ENDPOINTS in backend.ts.
+  if (backendHas("articles:update")) {
     const res = await proxy(`articles/${id}`, { method: "PATCH", body });
     return NextResponse.json(await res.json().catch(() => ({})), { status: res.status });
   }
@@ -37,7 +38,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const gate = await requireAdmin("content.write");
   if (isResponse(gate)) return gate;
   const { id } = await params;
-  if (backendConfigured()) {
+  // Not implemented on lea-be-core yet — see BACKEND_ENDPOINTS in backend.ts.
+  if (backendHas("articles:delete")) {
     const res = await proxy(`articles/${id}`, { method: "DELETE" });
     return NextResponse.json(await res.json().catch(() => ({})), { status: res.status });
   }

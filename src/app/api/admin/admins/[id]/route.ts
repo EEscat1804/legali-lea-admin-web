@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mutate, audit } from "@/lib/server/db";
 import { requireAdmin, isResponse, publicAdmin } from "@/lib/server/session";
-import { backendConfigured, proxy } from "@/lib/server/backend";
+import { backendHas, proxy } from "@/lib/server/backend";
 
 // Change an admin's role or activation (PRD §2). Super Admin only.
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -9,7 +9,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (isResponse(gate)) return gate;
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
-  if (backendConfigured()) {
+  // Not implemented on lea-be-core yet — see BACKEND_ENDPOINTS in backend.ts.
+  if (backendHas("admins:update")) {
     const res = await proxy(`admins/${id}`, { method: "PATCH", body });
     return NextResponse.json(await res.json().catch(() => ({})), { status: res.status });
   }
