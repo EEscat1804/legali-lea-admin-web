@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { readDb } from "@/lib/server/db";
 import { requireAdmin, isResponse } from "@/lib/server/session";
 import { backendHas, proxy } from "@/lib/server/backend";
-import { mapUser } from "@/lib/server/backend-mappers";
 
 // Monitor users (manager ask #3). Supports ?q, ?status, ?sub, ?language.
 export async function GET(req: NextRequest) {
@@ -10,8 +9,10 @@ export async function GET(req: NextRequest) {
   if (isResponse(gate)) return gate;
   const url = new URL(req.url);
   if (backendHas("users:list")) {
+    // proxy() already unwraps the envelope and camelCases every key, which
+    // matches AppUser field-for-field — no mapper needed (see backend-mappers.ts).
     const raw = await (await proxy(`users${url.search}`)).json();
-    return NextResponse.json({ items: (raw.items ?? []).map(mapUser), total: raw.total ?? 0 });
+    return NextResponse.json({ items: raw.items ?? [], total: raw.total ?? 0 });
   }
 
   const q = url.searchParams.get("q")?.toLowerCase() ?? "";

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { readDb } from "@/lib/server/db";
 import { requireAdmin, isResponse } from "@/lib/server/session";
 import { backendHas, proxy } from "@/lib/server/backend";
-import { mapSubscriptions } from "@/lib/server/backend-mappers";
 
 // Subscription control surface (manager ask / PRD §3.4). Returns the live
 // subscription rows (derived from users so admin overrides show up) + plans +
@@ -11,8 +10,10 @@ export async function GET() {
   const gate = await requireAdmin("subscriptions.read");
   if (isResponse(gate)) return gate;
   if (backendHas("subscriptions:list")) {
+    // proxy() already unwraps the envelope and camelCases every key, which
+    // matches SubscriptionRow/PricingPlan field-for-field — no mapper needed.
     const raw = await (await proxy("subscriptions")).json();
-    return NextResponse.json(mapSubscriptions(raw));
+    return NextResponse.json({ items: raw.items ?? [], plans: raw.plans ?? [], metrics: raw.metrics ?? {} });
   }
 
   const db = await readDb();

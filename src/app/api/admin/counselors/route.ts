@@ -10,6 +10,8 @@ export async function GET(req: NextRequest) {
   if (isResponse(gate)) return gate;
   const search = new URL(req.url).search;
   if (backendHas("counselors:list")) {
+    // proxy() already unwraps the envelope and camelCases every key; mapCounselor
+    // only needs to rename crisisSupport -> crisis (see backend-mappers.ts).
     const raw = await (await proxy(`counselors${search}`)).json();
     return NextResponse.json({ items: (raw.items ?? []).map(mapCounselor), total: raw.total ?? 0 });
   }
