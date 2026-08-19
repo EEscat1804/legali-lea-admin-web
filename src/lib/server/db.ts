@@ -7,6 +7,7 @@
 // src/lib/server/backend.ts). Until then, this IS the backend.
 
 import { promises as fs } from "fs";
+import os from "os";
 import path from "path";
 import {
   USERS,
@@ -62,7 +63,17 @@ export interface Db {
   knowledge: KnowledgeEntry[];
 }
 
-const DATA_DIR = path.join(process.cwd(), ".data");
+// process.cwd() is inside the deployed bundle, which is read-only on Vercel
+// (and most serverless hosts) — writing there throws EROFS. process.env.VERCEL
+// is set automatically by the platform, so fall back to the OS tmp dir there.
+// NOTE: /tmp is ephemeral per function instance — fine for seed data (it's
+// regenerated on first read), but session tokens written here can disappear
+// across cold starts or when a request lands on a different warm instance.
+// This unblocks the 500, it does not make the local store production-durable
+// — see BACKEND_API_URL / lea-be-core for the real fix.
+const DATA_DIR = process.env.VERCEL
+  ? path.join(os.tmpdir(), "lea-admin-data")
+  : path.join(process.cwd(), ".data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
 
 function seed(): Db {
